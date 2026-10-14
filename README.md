@@ -15,7 +15,7 @@
 ---
 
 ## Содержание
-
+- [Скриншоты](#скриншоты)
 - [Возможности](#возможности)
 - [Архитектура](#архитектура)
 - [Требования](#требования)
@@ -31,7 +31,19 @@
 
 ---
 
+## Скриншоты
+
+### Планирование маршрута
+![Планирование](docs/screenshots/planning.png)
+
+### Мониторинг
+![Мониторинг](docs/screenshots/monitoring.png)
+
+### Журнал полётов
+![Журнал](docs/screenshots/journal.png)
+
 ## Возможности
+
 
 ### 📍 Планирование маршрута
 - Интерактивная карта (OpenStreetMap / Leaflet)
@@ -63,31 +75,64 @@
 
 ## Архитектура
 
-┌──────────────────────────────────────────────────────────────┐
-│ Браузер (клиент) │
-│ ┌───────────────┐ ┌──────────────┐ ┌─────────────────┐ │
-│ │ Leaflet карта │ │ WebSocket │ │ REST API calls │ │
-│ └───────┬───────┘ └──────┬───────┘ └────────┬────────┘ │
-└───────────┼─────────────────┼───────────────────┼────────────┘
-│ │ │
-▼ ▼ ▼
-┌──────────────────────────────────────────────────────────────┐
-│ FastAPI (Uvicorn) │
-│ ┌────────────┬───────────┬──────────┬──────────────────┐ │
-│ │ /drones │ /flights │ /zones │ /monitoring │ │
-│ │ /ws/... │ HTML │ static │ Swagger /docs │ │
-│ └────────────┴───────────┴──────────┴──────────────────┘ │
-│ │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ Services: RouteVerifier (Shapely), JournalExporter │ │
-│ └────────────────────────────────────────────────────┘ │
-└──────────────────────────┬───────────────────────────────────┘
-│ SQLAlchemy async (asyncpg)
-▼
-┌──────────────────────────────────────────────────────────────┐
-│ PostgreSQL 18 + PostGIS │
-│ Таблицы: drones, flights, restricted_zones, flight_logs │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Client["🖥 Браузер (клиент)"]
+        direction LR
+        Map["🗺 Leaflet карта"]
+        WS["🔌 WebSocket"]
+        API["📡 REST API calls"]
+    end
+
+    subgraph Server["⚙️ FastAPI (Uvicorn)"]
+        direction TB
+        subgraph Routes["HTTP-роутеры"]
+            direction LR
+            D["/drones"]
+            F["/flights"]
+            Z["/zones"]
+            M["/monitoring"]
+        end
+        subgraph Extra["Дополнительно"]
+            direction LR
+            H["HTML / Jinja2"]
+            S["static"]
+            SW["Swagger /docs"]
+        end
+        subgraph Services["Сервисы"]
+            direction LR
+            V["RouteVerifier<br/>(Shapely)"]
+            E["JournalExporter"]
+            Sim["FlightSimulator"]
+        end
+    end
+
+    DB[("🗄 PostgreSQL 18 + PostGIS<br/>drones · flights ·<br/>restricted_zones · flight_logs")]
+
+    Map --> API
+    WS -.-> WS
+    API --> Routes
+    WS --> Routes
+    Routes --> Services
+    Services -->|SQLAlchemy async<br/>asyncpg| DB
+
+    classDef clientBox fill:#e3f2fd,stroke:#1976d2,color:#000
+    classDef serverBox fill:#fff3e0,stroke:#f57c00,color:#000
+    classDef dbBox fill:#e8f5e9,stroke:#388e3c,color:#000
+    classDef svcBox fill:#f3e5f5,stroke:#7b1fa2,color:#000
+
+    class Map,WS,API clientBox
+    class D,F,Z,M,H,S,SW serverBox
+    class V,E,Sim svcBox
+    class DB dbBox
+```
+
+**Поток данных:**
+1. Оператор задаёт маршрут на карте Leaflet и отправляет его через REST API.
+2. FastAPI принимает запрос, вызывает `RouteVerifier` (Shapely) для проверки пересечений с зонами.
+3. Результат верификации и само полётное задание сохраняются в PostgreSQL через SQLAlchemy (async).
+4. `FlightSimulator` в фоне двигает БВС по маршрутам и рассылает обновления через WebSocket всем подключённым клиентам.
+5. Журнал полётов доступен с фильтрами и выгрузкой в Excel/CSV через `JournalExporter`.
 
 ### Стек технологий
 
