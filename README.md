@@ -1,4 +1,10 @@
+
 # Веб-система планирования, верификации и мониторинга полётных задач парка БВС
+
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 Автоматизированная система для операторов коммерческой авиации БВС.
 Позволяет планировать маршруты на карте, автоматически проверять их
