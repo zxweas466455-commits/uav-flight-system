@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block title %}Планирование полёта{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div id="map" style="height: 600px; border-radius: 8px;"></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Параметры маршрута</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">БВС</label>
+                    <select id="droneSelect" class="form-select">
+                        <option value="">Загрузка...</option>
+                    </select>
+                    <small class="text-muted" id="droneHint"></small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Высота полёта (м)</label>
+                    <input type="number" id="altitude" class="form-control"
+                           value="150" min="10" max="5000">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Путевые точки</label>
+                    <div id="waypointsList" class="border rounded p-2"
+                         style="max-height: 200px; overflow-y: auto;">
+                        <small class="text-muted">Кликайте по карте для добавления точек</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Примечания</label>
+                    <textarea id="notes" class="form-control" rows="2"
+                              placeholder="Необязательно"></textarea>
+                </div>
+                <button type="button" id="verifyBtn" class="btn btn-primary w-100 mb-2">
+                    Проверить маршрут
+                </button>
+                <button type="button" id="createFlightBtn" class="btn btn-success w-100" disabled>
+                    Создать полётное задание
+                </button>
+                <button type="button" id="clearBtn" class="btn btn-outline-secondary w-100 mt-2">
+                    Очистить
+                </button>
+            </div>
+        </div>
+        <div id="verificationResult" class="card mt-3 d-none">
+            <div class="card-header">Результат верификации</div>
+            <div class="card-body" id="verificationBody"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+console.log('[Planner] скрипт загружен');
+
+// ============================================================
+// Состояние
+// ============================================================
+const state = {
+    map: null,
+    waypoints: [],
+    markers: [],
+    routeLine: null,
+};
+
+const ZONE_STYLE = {
+    permanent: { color: '#dc3545', fillColor: '#dc3545', fillOpacity: 0.15, weight: 2 },
+    temporary: { color: '#fd7e14', fillColor: '#fd7e14', fillOpacity: 0.15, weight: 2 },
+    reserved:  { color: '#6f42c1', fillColor: '#6f42c1', fillOpacity: 0.15, weight: 2 },
+};
+
+// ============================================================
+// Карта
+// ============================================================
+function initMap() {
+    console.log('[Planner] инициализация карты');
+    state.map = L.map('map').setView([55.7558, 37.6173], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+    }).addTo(state.map);
+
+    state.map.on('click', (e) => addWaypoint(e.latlng.lat, e.latlng.lng));
+    loadZones();
+}
+
+async function loadZones() {
+    try {
+        console.log('[Planner] загрузка зон');
+        const resp = await fetch('/api/zones/geojson');
+        if (!resp.ok) {
+            console.warn('[Planner] зоны: HTTP', resp.status);
+            return;
+        }
+        const data = await resp.json();
+        console.log('[Planner] зон получено:', data.features?.length || 0);
+        L.geoJSON(data, {
+            style: (f) => ZONE_STYLE[f.properties.zone_type] || ZONE_STYLE.temporary,
+            onEachFeature: (f, layer) => {
+                const p = f.properties;
+                layer.bindPopup(
+                    `<b>${p.name}</b><br>Тип: ${p.zone_type}<br>` +
+                    `Высоты: ${p.lower_limit_m}–${p.upper_limit_m} м`
+                );
+            }
+        }).addTo(state.map);
+    } catch (e) {
+        console.error('[Planner] ошибка загрузки зон:', e);
+    }
+}
+
+// ============================================================
+// Путевые точки
+// ============================================================
+function addWaypoint(lat, lon) {
+    const alt = parseFloat(document.getElementById('altitude').value || 150);
+    const wp = { lat: +lat.toFixed(6), lon: +lon.toFixed(6), alt };
+
+    const icon = L.divIcon({
+        className: '',
+        html: `<div style="background:#0d6efd;color:white;width:24px;height:24px;
+                          border-radius:50%;display:flex;align-items:center;
+                          justify-content:center;font-weight:600;
+                          border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.3);
+                          font-size:12px;">${state.waypoints.length + 1}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+    });
+
+    const marker = L.marker([lat, lon], { draggable: true, icon }).addTo(state.map);
+    marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        const idx = state.markers.indexOf(marker);
+        if (idx >= 0) {
+            state.waypoints[idx].lat = +pos.lat.toFixed(6);
+            state.waypoints[idx].lon = +pos.lng.toFixed(6);
+            redrawRoute();
+            renderWaypointsList();
+        }
+    });
+
+    state.markers.push(marker);
+    state.waypoints.push(wp);
+    redrawRoute();
+    renderWaypointsList();
+    console.log('[Planner] добавлена точка:', wp, 'всего:', state.waypoints.length);
+}
+
+function removeWaypoint(idx) {
+    state.map.removeLayer(state.markers[idx]);
+    state.markers.splice(idx, 1);
+    state.waypoints.splice(idx, 1);
+    redrawRoute();
+    renderWaypointsList();
+}
+
+function clearAll() {
+    state.markers.forEach(m => state.map.removeLayer(m));
+    state.markers = [];
+    state.waypoints = [];
+    if (state.routeLine) {
+        state.map.removeLayer(state.routeLine);
+        state.routeLine = null;
+    }
+    renderWaypointsList();
+    document.getElementById('verificationResult').classList.add('d-none');
+    document.getElementById('createFlightBtn').disabled = true;
+}
+
+function redrawRoute() {
+    if (state.routeLine) state.map.removeLayer(state.routeLine);
+    if (state.waypoints.length >= 2) {
+        state.routeLine = L.polyline(
+            state.waypoints.map(wp => [wp.lat, wp.lon]),
+            { color: '#0d6efd', weight: 3, opacity: 0.8, dashArray: '8,6' }
+        ).addTo(state.map);
+    }
+}
+
+function renderWaypointsList() {
+    const list = document.getElementById('waypointsList');
+    if (state.waypoints.length === 0) {
+        list.innerHTML = '<small class="text-muted">Кликайте по карте для добавления точек</small>';
+        return;
+    }
+    list.innerHTML = state.waypoints.map((wp, i) => `
+        <div class="waypoint-item">
+            <span><b>${i + 1}.</b> ${wp.lat}, ${wp.lon} · ${wp.alt} м</span>
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                    onclick="removeWaypoint(${i})">×</button>
+        </div>
+    `).join('');
+}
+
+// ============================================================
+// Загрузка дронов в select
+// ============================================================
+async function loadDronesForSelect() {
+    const select = document.getElementById('droneSelect');
+    const hint = document.getElementById('droneHint');
+    try {
+        console.log('[Planner] загрузка дронов');
+        const resp = await fetch('/api/drones');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const drones = await resp.json();
+        console.log('[Planner] дронов получено:', drones.length);
+
+        const available = drones.filter(d => d.status !== 'maintenance');
+        if (available.length === 0) {
+            select.innerHTML = '<option value="">Нет доступных БВС</option>';
+            hint.textContent = 'Все БВС на обслуживании';
+            return;
+        }
+        select.innerHTML = '<option value="">— выберите БВС —</option>' +
+            available.map(d => {
+                const statusRu = {
+                    idle: 'на базе',
+                    in_flight: 'в полёте',
+                    maintenance: 'обслуживание',
+                }[d.status] || d.status;
+                const busy = d.status === 'in_flight' ? ' ⚠' : '';
+                return `<option value="${d.id}">${d.name} — ${statusRu}${busy}</option>`;
+            }).join('');
+        hint.textContent = `Доступно БВС: ${available.length}`;
+    } catch (e) {
+        console.error('[Planner] ошибка загрузки дронов:', e);
+        select.innerHTML = '<option value="">Ошибка загрузки</option>';
+    }
+}
+
+// ============================================================
+// Верификация
+// ============================================================
+async function doVerify() {
+    console.log('[Planner] клик по «Проверить маршрут»');
+    const waypoints = state.waypoints;
+    if (waypoints.length < 2) {
+        alert('Добавьте минимум 2 точки на карте');
+        return;
+    }
+    const altitude = parseFloat(document.getElementById('altitude').value);
+
+    const btn = document.getElementById('verifyBtn');
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Проверка...';
+
+    try {
+        const payload = { waypoints, altitude_m: altitude };
+        console.log('[Planner] отправка на /api/flights/verify:', payload);
+
+        const resp = await fetch('/api/flights/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        console.log('[Planner] ответ:', resp.status);
+        const rawText = await resp.text();
+        console.log('[Planner] тело ответа:', rawText);
+
+        if (!resp.ok) {
+            alert(`Ошибка сервера (HTTP ${resp.status}):\n${rawText}`);
+            return;
+        }
+
+        const result = JSON.parse(rawText);
+        console.log('[Planner] результат:', result);
+
+        const card = document.getElementById('verificationResult');
+        const body = document.getElementById('verificationBody');
+        card.classList.remove('d-none');
+
+        const conflictsHtml = (result.conflicts || []).length
+            ? `<ul class="mb-2">${result.conflicts.map(c =>
+                `<li class="text-${c.severity === 'critical' ? 'danger' : 'warning'}">
+                    ${c.message}</li>`).join('')}</ul>`
+            : '';
+
+        body.innerHTML = `
+            <div class="alert alert-${result.is_valid ? 'success' : 'danger'}">
+                ${result.is_valid ? '✅ Маршрут безопасен' : '❌ Обнаружены конфликты'}
+            </div>
+            <p class="mb-1">Проверено зон: <b>${result.total_zones_checked}</b></p>
+            <p class="mb-1">Критических конфликтов: <b>${result.critical_count || 0}</b></p>
+            <p class="mb-1">Длина маршрута: <b>${Math.round(result.route_length_m || 0)} м</b></p>
+            ${conflictsHtml}
+        `;
+
+        document.getElementById('createFlightBtn').disabled = !result.is_valid;
+
+    } catch (e) {
+        console.error('[Planner] ошибка верификации:', e);
+        alert('Ошибка сети или парсинга: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+    }
+}
+
+// ============================================================
+// Создание полёта
+// ============================================================
+async function doCreateFlight() {
+    console.log('[Planner] клик по «Создать полётное задание»');
+    const droneId = document.getElementById('droneSelect').value;
+    if (!droneId) {
+        alert('Выберите БВС');
+        return;
+    }
+    const waypoints = state.waypoints;
+    if (waypoints.length < 2) {
+        alert('Добавьте минимум 2 точки');
+        return;
+    }
+    const altitude = parseFloat(document.getElementById('altitude').value);
+    const notes = document.getElementById('notes').value || null;
+
+    const btn = document.getElementById('createFlightBtn');
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Создание...';
+
+    try {
+        const payload = {
+            drone_id: droneId,
+            waypoints,
+            altitude_m: altitude,
+            notes,
+        };
+        console.log('[Planner] отправка на /api/flights:', payload);
+
+        const resp = await fetch('/api/flights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const rawText = await resp.text();
+        console.log('[Planner] ответ:', resp.status, rawText);
+
+        if (!resp.ok) {
+            alert(`Ошибка создания (HTTP ${resp.status}):\n${rawText}`);
+            return;
+        }
+
+        const flight = JSON.parse(rawText);
+        alert(
+            `✅ Полёт создан!\n\n` +
+            `ID: ${flight.id}\n` +
+            `Статус: ${flight.status}\n\n` +
+            `Сейчас перейдём в журнал полётов.`
+        );
+        window.location.href = '/journal';
+    } catch (e) {
+        console.error('[Planner] ошибка создания:', e);
+        alert('Ошибка сети: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+    }
+}
+
+// ============================================================
+// Инициализация
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[Planner] DOM готов');
+    initMap();
+    await loadDronesForSelect();
+
+    document.getElementById('verifyBtn').addEventListener('click', doVerify);
+    document.getElementById('createFlightBtn').addEventListener('click', doCreateFlight);
+    document.getElementById('clearBtn').addEventListener('click', clearAll);
+    console.log('[Planner] обработчики навешены');
+});
+</script>
+{% endblock %}

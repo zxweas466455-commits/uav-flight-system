@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Запретная зона №1 (аэропорт)",
+        "zone_type": "permanent",
+        "lower_limit_m": 0,
+        "upper_limit_m": 3000,
+        "description": "Зона вокруг аэропорта"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [37.55, 55.70],
+          [37.65, 55.70],
+          [37.65, 55.75],
+          [37.55, 55.75],
+          [37.55, 55.70]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Временная зона (учения)",
+        "zone_type": "temporary",
+        "lower_limit_m": 0,
+        "upper_limit_m": 500,
+        "description": "Зона временного ограничения"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [37.70, 55.78],
+          [37.76, 55.78],
+          [37.76, 55.82],
+          [37.70, 55.82],
+          [37.70, 55.78]
+        ]]
+      }
+    }
+  ]
+}

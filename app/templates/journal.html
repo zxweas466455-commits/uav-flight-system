@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Журнал полётов{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Журнал полётов</span>
+        <div>
+            <a href="/api/flights/export/excel" class="btn btn-sm btn-success">
+                📥 Excel
+            </a>
+            <a href="/api/flights/export/csv" class="btn btn-sm btn-outline-success">
+                📥 CSV
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Фильтры -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-2">
+                <label class="form-label small">Статус</label>
+                <select id="filterStatus" class="form-select form-select-sm filter-input">
+                    <option value="">Все</option>
+                    <option value="planned">Запланирован</option>
+                    <option value="approved">Одобрен</option>
+                    <option value="in_progress">В полёте</option>
+                    <option value="completed">Завершён</option>
+                    <option value="rejected">Отклонён</option>
+                    <option value="cancelled">Отменён</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">БВС</label>
+                <select id="filterDrone" class="form-select form-select-sm filter-input">
+                    <option value="">Все</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Дата с</label>
+                <input type="date" id="filterDateFrom" class="form-control form-control-sm filter-input">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Дата по</label>
+                <input type="date" id="filterDateTo" class="form-control form-control-sm filter-input">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Поиск</label>
+                <input type="text" id="filterSearch" class="form-control form-control-sm filter-input"
+                       placeholder="В примечаниях...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button id="btnReset" class="btn btn-sm btn-outline-secondary w-100">Сбросить</button>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <small id="journalCounter" class="text-muted">Найдено: 0</small>
+        </div>
+
+        <!-- Таблица -->
+        <div class="table-responsive">
+            <table class="table table-hover table-journal mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>БВС</th>
+                        <th>Статус</th>
+                        <th>Начало (план)</th>
+                        <th>Окончание (план)</th>
+                        <th>Начало (факт)</th>
+                        <th>Окончание (факт)</th>
+                        <th>Валидация</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="journalBody">
+                    <tr><td colspan="9" class="text-center text-muted py-4">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно деталей -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали полёта</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/journal.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => Journal.init());
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+/* ========== Общие стили ========== */
+:root {
+    --primary-color: #0d6efd;
+    --danger-color: #dc3545;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --bg-dark: #212529;
+}
+
+body {
+    background: #f4f6f9;
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    min-height: 100vh;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* ========== Карта ========== */
+#map, #monitoringMap {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+/* ========== Карточки ========== */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+/* ========== Статусы БВС ========== */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-idle       { background: #e9ecef; color: #495057; }
+.status-in_flight  { background: #d1e7dd; color: #0f5132; }
+.status-maintenance{ background: #fff3cd; color: #664d03; }
+
+/* ========== Статусы полётов ========== */
+.flight-status {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.flight-status.planned     { background: #cfe2ff; color: #084298; }
+.flight-status.approved    { background: #d1e7dd; color: #0f5132; }
+.flight-status.in_progress { background: #fff3cd; color: #664d03; }
+.flight-status.completed   { background: #d3d3d3; color: #333; }
+.flight-status.rejected    { background: #f8d7da; color: #842029; }
+.flight-status.cancelled   { background: #e2e3e5; color: #41464b; }
+
+/* ========== Пульт мониторинга ========== */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.15s ease;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+.stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+}
+.stat-card .stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+}
+
+/* ========== Журнал полётов ========== */
+.table-journal {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.table-journal th {
+    background: #f8f9fa;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+.table-journal td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+/* ========== Лог событий ========== */
+.event-item {
+    padding: 8px 12px;
+    border-left: 3px solid var(--primary-color);
+    background: white;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 0.88rem;
+}
+.event-item.verification   { border-left-color: #0d6efd; }
+.event-item.status_change  { border-left-color: #198754; }
+.event-item.telemetry      { border-left-color: #6c757d; }
+.event-item.conflict       { border-left-color: #dc3545; }
+
+/* ========== Путевые точки ========== */
+.waypoint-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+}
+.waypoint-item:last-child { border-bottom: none; }
+
+/* ========== Модальные окна ========== */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+}
+
+/* ========== Индикатор WebSocket ========== */
+#wsStatus {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    z-index: 1000;
+    background: #e9ecef;
+    color: #495057;
+}
+#wsStatus.connected    { background: #d1e7dd; color: #0f5132; }
+#wsStatus.disconnected { background: #f8d7da; color: #842029; }
+
+/* ========== Утилиты ========== */
+.marker-drone {
+    background: var(--primary-color);
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.3);
+}
+
+.marker-waypoint {
+    background: var(--success-color);
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+}

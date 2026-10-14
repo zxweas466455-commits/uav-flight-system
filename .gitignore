@@ -1,0 +1,44 @@
+# ===== Python =====
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# ===== Окружение =====
+.env
+.env.local
+.env.*.local
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== Логи и данные =====
+logs/
+*.log
+data/*.xlsx
+data/*.csv
+
+# ===== Тесты =====
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== Система =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Временное =====
+*.bak
+*.tmp
+tmp/

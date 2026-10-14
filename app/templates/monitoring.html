@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Мониторинг парка БВС{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Всего БВС</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-value text-success" id="statInFlight">0</div>
+            <div class="stat-label">В полёте</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-value text-secondary" id="statIdle">0</div>
+            <div class="stat-label">На базе</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-value text-warning" id="statMaintenance">0</div>
+            <div class="stat-label">Обслуживание</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-value text-primary" id="statActiveFlights">0</div>
+            <div class="stat-label">Активных полётов</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Карта мониторинга</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="Monitoring.refreshStatus()">
+                    Обновить
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div id="monitoringMap" style="height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Лента событий</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="Monitoring.refreshEvents()">
+                    Обновить
+                </button>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                <div id="eventsFeed">
+                    <div class="text-muted">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="wsStatus" class="disconnected">WebSocket: подключение...</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/monitoring.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        Monitoring.init('monitoringMap');
+        Monitoring.refreshEvents();
+        setInterval(Monitoring.refreshEvents, 15000);
+    });
+</script>
+{% endblock %}
